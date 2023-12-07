@@ -4,6 +4,6 @@ from django.http import HttpResponse
 
 # Create your views here.
 def home_view(request):
-  template_path = BASE_DIR / 'My_app' / 'frontend' / 'views' / 'home.html'
+  template_path = BASE_DIR / 'My_app' / 'frontend' / 'views' / 'index.html'
 
   return render(request, template_path)
