@@ -14,11 +14,16 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
-# from frontend.views.Home import *
+from django.urls import path, include, re_path
 from .backend.views import home_view
+from . import consumers
+
+websocket_urlpatterns = [
+    path('ws/game/', consumers.YourConsumer.as_asgi()),
+    # Dodaj więcej ścieżek WebSocket według potrzeb
+]
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', home_view, name="Home")
+    path('', home_view, name="Home"),
 ]
