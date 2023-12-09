@@ -6,25 +6,26 @@
 
 <script setup>
 
-console.log('elo');
+// Inicjalizacja WebSocket
+const socket = new WebSocket('ws://127.0.0.1:8012/ws/game');
 
-const socket = new WebSocket('ws://127.0.0.1:8000/ws/game');
-
+// Reakcja na otwarcie połączenia WebSocket
 socket.onopen = (event) => {
-    console.log('WebSocket connection opened:', event);
-    socket.send(JSON.stringify({
-      message: "siemanko"
-    }));
+  console.log('WebSocket connection opened:', event);
+  socket.send(JSON.stringify({
+    message: "siemanko"
+  }));
 };
 
-
+// Reakcja na przychodzące wiadomości WebSocket
 socket.onmessage = (event) => {
-    const data = JSON.parse(event.data) ?? JSON.parse(event.message);
-    console.log('WebSocket message received:', data);
+  // Odbierz dane z wiadomości
+  console.log(event);
 };
 
+// Reakcja na zamknięcie połączenia WebSocket
 socket.onclose = (event) => {
-    console.log('WebSocket connection closed:', event);
+  console.log('WebSocket connection closed:', event);
 };
 
 </script>
