@@ -4,6 +4,7 @@ import asyncio
 import time
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from .cv_optimised.test import ImageProcess, Board
 
 class YourConsumer(WebsocketConsumer):
     def connect(self):
@@ -13,6 +14,34 @@ class YourConsumer(WebsocketConsumer):
             self.channel_name
         )
         self.accept()
+        # CV scripts
+        # script_directory = os.path.dirname(os.path.abspath(__file__))
+        # image_path = os.path.join(script_directory, 'plansza.jpg')
+        
+        image_path = 'C:/Users/TOM/Desktop/Projekt_Warcaby/Warcaby/My_app/cv_optimised/plansza.jpg'
+
+        board = Board(image_path)# Wycięcie samej planszy z obrazu
+        if board.board is not None:
+            proc = ImageProcess(board.board)
+            board = proc.frame_table()#uzyskanie pionków
+            #Send message
+            async_to_sync(self.channel_layer.group_send)(
+            self.group_name,
+            {
+              'success' : True,
+              'type' : 'initial_board_positions',
+              'message' : 'test',
+              'positions' : board.tolist()
+            })
+        else:
+            async_to_sync(self.channel_layer.group_send)(
+            self.group_name,
+            {
+              'success' : False,
+              'type' : 'initial_board_positions',
+              'message' : 'test',
+              'positions' : board
+            })
 
 
     def disconnect(self, close_code):
@@ -28,8 +57,10 @@ class YourConsumer(WebsocketConsumer):
         async_to_sync(self.channel_layer.group_send)(
           self.group_name,
           {
-            'type' : 'chat_message',
+            'success': True,
+            'type' : 'current_position_message',
             'message' : 'test',
+            'is_legal' : False,
             'moves': [
                 [
                     {
@@ -118,11 +149,29 @@ class YourConsumer(WebsocketConsumer):
             ]
         })
     
-    def chat_message(self, event):
+    def initial_board_positions(self, event):
       message = event['message']
+      positions = event['positions']
+      success = event['success']
 
       self.send(text_data=json.dumps({
-        'type' : 'chat',
-        'message' : message
+        'success' : success,
+        'type' : 'board_positions',
+        'message' : message,
+        'positions' : positions,
+      }))
+
+    def current_position_message(self, event):
+      message = event['message']
+      moves = event['moves']
+      success = event['success']
+      is_legal = event['is_legal']
+
+      self.send(text_data=json.dumps({
+        'success' : success,
+        'is_legal' : is_legal,
+        'type' : 'new_position',
+        'message' : message,
+        'moves' : moves,
       }))
     
