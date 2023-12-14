@@ -16,8 +16,8 @@ możliwe zasady gry:
 4. królówka maks 1 pole ruchu / królowka nieograniczony ruch
 
 
--2 = czarna królówka
--1 = czarny pion
-0 = brak pionka na polu
-1 = biały pion
-2 = biała królówka
+-2 = czarna królówka<br>
+-1 = czarny pion<br>
+0 = brak pionka na polu<br>
+1 = biały pion<br>
+2 = biała królówka<br>
