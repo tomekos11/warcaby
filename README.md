@@ -14,3 +14,10 @@ możliwe zasady gry:
 2. bicie zwykłym pionkiem do tyłu / brak bicia do tyłu zwykłym pionkiem
 3. królówka po ubiciu pionka zatrzymuje się na pierwszym wolnym polu / może iść dalej
 4. królówka maks 1 pole ruchu / królowka nieograniczony ruch
+
+
+-2 = czarna królówka
+-1 = czarny pion
+0 = brak pionka na polu
+1 = biały pion
+2 = biała królówka
