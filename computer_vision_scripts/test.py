@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 from math import atan2, cos, sin, sqrt, pi
 import os
+import json
 
 class ImageProcess:
     def __init__(self, image):
@@ -92,7 +93,8 @@ class ImageProcess:
                     board[i][j] = '-'
 
         return np.rot90(board, k=2).tolist()
-    
+        # return np.rot90(board, k=2)
+
     def checkIsKing(self, img, radius, circle):
         # Sprawdzenie, czy pionek jest krolowka   
         circles = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, 1, 20, param1=50, param2=23 , minRadius= int(radius/2), maxRadius= int(radius - 0.2 * radius))
@@ -129,7 +131,7 @@ class ImageProcess:
         for i in circles[0]:
             # print(w, h, i)
             # print(w + 0.1 * w > 2 * i[2], h + 0.1 * h  > 2 * i[2], w * 0.35 < i[2], h * 0.35 < i[2])
-            if (w + 0.1 * w > 2 * i[2] or h + 0.1 * h > 2 * i[2]) and (w * 0.35 < i[2] or h * 0.35 < i[2]):
+            if (w + 0.1 * w > 2 * i[2] or h + 0.1 * h > 2 * i[2]) and (w * 0.3 < i[2] or h * 0.3 < i[2]):
                 return True, i
         # print("DIM: ", x, y, w, h)
         # print(circles[0]) 
@@ -137,27 +139,27 @@ class ImageProcess:
         
     def searchForPawn(self, img, pos):
         # Przygotowanie obrazu do oceny 
+        img_color = copy.deepcopy(img)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img_gray = copy.deepcopy(img)
         img = cv2.medianBlur(img, 5)
-        img_copy = copy.deepcopy(img) # to ewentualnie moze byc przed Blurem, chociaż tak wydaje sie ok.
+        img_copy = copy.deepcopy(img) # to ewentualnie moze byc przed Blurem, chociaż tak wydaje sie ok.        
         # Binaryzacja
-        x, dst = cv2.threshold(img, 100, 255, cv2.THRESH_BINARY)
+        x, dst = cv2.threshold(img, 50, 255, cv2.THRESH_BINARY)
         # Poprzedni sposob, niby dziala, ale nie dziala
         """#edges = cv2.GaussianBlur(img3, (3, 3), 0)
         #edges = cv2.Canny(edges, self.param1, self.param2)        
-        #circles = cv2.HoughCircles(edges, cv2.HOUGH_GRADIENT, 1, 20, param1=70, param2=20, minRadius=10, maxRadius=0)"""
-
+        #circles = cv2.HoughCircles(edges, cv2.HOUGH_GRADIENT, 1, 20, param1=70, param2=20, minRadius=10, maxRadius=0)"""        
         # Transformacja Hougha do znalezienia okręgów na obrazie, todo dodanie ustawiania
-        circles = cv2.HoughCircles(copy.deepcopy(img), cv2.HOUGH_GRADIENT, 1, 20, param1=150 , param2=24 , minRadius=0, maxRadius=100)
+        circles = cv2.HoughCircles(copy.deepcopy(img), cv2.HOUGH_GRADIENT, 1, 20, param1=150 , param2=24, minRadius=0, maxRadius=100)
         # Nie ma okregow, to 0
         if circles is not None:
             # Na inty
             circles = np.uint16(np.around(circles))
             #Rysowanie do testów
-            """for i in circles[0, :]:
+            for i in circles[0, :]:
                 cv2.circle(img, (i[0], i[1]), i[2], (255, 255, 255), 2)
-            board.showActualImage(img, 'circles')"""
+            #board.showActualImage(img, 'circles')
             # Sprawdzenie okregow, wybranie najbardziej prawdopodobnego
             isGood, circle = self.checkCircleIsCorrect(img_gray, circles)
             if not isGood:
@@ -165,9 +167,7 @@ class ImageProcess:
         else:
             return 0
         #Rysowanie jak poszło wyszukiwanie okregow
-        # for i in circles[0, :]:
-        #     cv2.circle(img, (i[0], i[1]), i[2], (255, 255, 255), 2)
-        # board.showActualImage(img, 'circles')
+ 
         radius = circle[2]
         # Ocena, czy na obrazie znajduje sie drugi okrag - damka
         isKing = self.checkIsKing(img_copy, radius, circle) 
@@ -175,30 +175,24 @@ class ImageProcess:
         d = int(circle[2] / 1.6)
         x = circle[0]
         y = circle[1]
-
-        suma = 0
-        divi = 0
-        for row in dst[y - d:y + d, x - d:x + d]:
-            for px in row:            
-                suma += px
-                divi += 1
-        try:
-            suma /= divi
-        except ZeroDivisionError:
-            pass 
-        
-        thr = 150  # todo ustawienie progu, bo tutaj mocno kolor decyduje
-        # Wypisanie wartosci oraz rysowanie okregu na obrazie
-        #print(suma, thr)
-        """if suma > thr:
-            cv2.circle(img, (el[0], el[1]), el[2], (255, 0, 0), 2)
-        else:
-            cv2.circle(img, (el[0], el[1]), el[2], (255, 255, 255), 2)"""
-        # Ocena na podstawie sredniej jakiego koloru jest pionek
-        if suma > thr:
+        suma = [0, 0, 0]
+        x_p = y-d if y-d > 0 else 0
+        y_p = x-d if x-d > 0 else 0
+        for row in img_color[x_p:y+d, y_p:x+d]:
+            for px in row:
+                suma[0] += px[0]
+                suma[1] += px[1]
+                suma[2] += px[2]
+                #bgr, b > g
+        #board.showActualImage(img_color, 'circles')
+        if suma[0] > suma[1]:
             return 2 if isKing else 1
         else:
-            return -2 if isKing else -1        
+            return -2 if isKing else -1
+        # """if suma > thr:
+        #     cv2.circle(img, (el[0], el[1]), el[2], (255, 0, 0), 2)
+        # else:
+        #     cv2.circle(img, (el[0], el[1]), el[2], (255, 255, 255), 2)"""       
 
 class Board:
     def __init__(self, image):
@@ -317,6 +311,55 @@ class Board:
         if destroy == True:
             cv2.destroyAllWindows()
 
+def checkIfValid(board, old_board_filename):
+    script_directory = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(script_directory, old_board_filename), 'r') as old_board:
+        old_board = json.load(old_board)
+
+    print(old_board)
+    if(old_board == board):
+        print('sa takie same')
+          
+def deleteBoardJSON(old_board_filename):
+    try:
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(script_directory, old_board_filename)
+        os.remove(file_path)
+        print(f'Plik {old_board_filename} został usunięty.')
+    except FileNotFoundError:
+        print(f'Plik {old_board_filename} nie istnieje.')
+    except Exception as e:
+        print(f'Wystąpił błąd podczas usuwania pliku: {e}')
+
+def modifyBoardJSON(details, board, old_board_filename):
+    script_directory = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(script_directory, old_board_filename)
+
+    with open(file_path, 'w') as jsonfile:
+        json.dump({
+          "details" : details,
+          "board" : board
+        }, jsonfile, indent=2)
+
+def InitialiseBoardJSON(board):
+    script_directory = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(script_directory, old_board_filename)
+
+    with open(file_path, 'w') as jsonfile:
+        json.dump({
+          "details" : details,
+          "board" : board
+        }, jsonfile, indent=2)
+
+def countPawnAmount(board):
+    pawn_counter = 0
+    for row in board:
+          for cell in row:
+            if cell != '-':
+              pawn_counter+=1
+    return pawn_counter
+
+  
 if __name__ == "__main__":
     script_directory = os.path.dirname(os.path.abspath(__file__))
     image_path = os.path.join(script_directory, 'plansza.jpg')
@@ -324,6 +367,20 @@ if __name__ == "__main__":
     if board.board is not None:
         proc = ImageProcess(board.board)
         board = proc.frame_table()#uzyskanie pionków
-        print(board)
+        filename = 'old_board.json'
+        details = {
+            "iteration_counter" : 0,
+            "pawn_counter" : countPawnAmount(board)
+        }
+        print(details)
+        
+
+
+        # modifyLatestBoard()
+
+        # checkIfValid(board, filename)
+        # deleteBoardFiles(filename)
+        # print(board)
+        
     else:
         print(":(")

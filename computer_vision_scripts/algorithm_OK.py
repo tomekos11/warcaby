@@ -97,7 +97,7 @@ class Checkers():
                                     else:
                                         break
                             else:
-                                break        
+                                break
         return normalMoves, gainMoves
 
     def nextMoves(self, player):
