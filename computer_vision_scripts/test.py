@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 from math import atan2, cos, sin, sqrt, pi
 import os
-
 class ImageProcess:
     def __init__(self, image):
         self.param1 = 70#regulacja
@@ -201,8 +200,8 @@ class ImageProcess:
             return -2 if isKing else -1        
 
 class Board:
-    def __init__(self, image):
-        self.image = cv2.imread(image)
+    def __init__(self):
+        self.image = cap.read()
         self.gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
         self.board = self.getOnlyBoard(self.image)
 
@@ -318,9 +317,7 @@ class Board:
             cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    script_directory = os.path.dirname(os.path.abspath(__file__))
-    image_path = os.path.join(script_directory, 'plansza.jpg')
-    board = Board(image_path)# Wycięcie samej planszy z obrazu
+    board = Board()# Wycięcie samej planszy z obrazu
     if board.board is not None:
         proc = ImageProcess(board.board)
         board = proc.frame_table()#uzyskanie pionków

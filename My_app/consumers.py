@@ -2,10 +2,14 @@ from channels.generic.websocket import AsyncWebsocketConsumer, WebsocketConsumer
 import json
 import asyncio
 import time
+import cv2
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from .cv_optimised.test import ImageProcess, Board
 
+cap = cv2.VideoCapture(1)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 class YourConsumer(WebsocketConsumer):
     def connect(self):
         self.group_name = "chat"
@@ -14,12 +18,22 @@ class YourConsumer(WebsocketConsumer):
             self.channel_name
         )
         self.accept()
-        # CV scripts
-        # script_directory = os.path.dirname(os.path.abspath(__file__))
-        # image_path = os.path.join(script_directory, 'plansza.jpg')
-        image_path = ('C:/Users/MikolajSalamak/PycharmProjects/warcaby/My_app/cv_optimised/plansza.jpg')
 
-        board = Board(image_path)# Wycięcie samej planszy z obrazu
+    def disconnect(self, close_code):
+        async_to_sync(self.channel_layer.group_discard)(
+            self.group_name,
+            self.channel_name
+        )
+
+    def receive(self, text_data):
+        text_data_json = json.loads(text_data)
+        message = text_data_json['message']
+
+        ret, frame = cap.read()
+        cv2.imwrite('frame.jpg', frame)
+        image = cv2.imread('frame.jpg')
+
+        board = Board(image)# Wycięcie samej planszy z obrazu
         if board.board is not None:
             proc = ImageProcess(board.board)
             board = proc.frame_table()#uzyskanie pionków
@@ -39,19 +53,8 @@ class YourConsumer(WebsocketConsumer):
               'success' : False,
               'type' : 'initial_board_positions',
               'message' : 'test',
-              'positions' : board
+              'positions' : []
             })
-
-
-    def disconnect(self, close_code):
-        async_to_sync(self.channel_layer.group_discard)(
-            self.group_name,
-            self.channel_name
-        )
-
-    def receive(self, text_data):
-        text_data_json = json.loads(text_data)
-        message = text_data_json['message']
     
     def initial_board_positions(self, event):
       message = event['message']
