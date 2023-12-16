@@ -6,6 +6,7 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from .cv_optimised.test import ImageProcess, Board
 import os
+import numpy as np
 
 iteration_counter = 0
 
@@ -40,28 +41,83 @@ def deleteBoardJSON(old_board_filename):
     except Exception as e:
         print(f'Wystąpił błąd podczas usuwania pliku: {e}')
 
+def calcPossibleMoves(y, x):
+    possible_moves = [(y+1, x+1), (y+1, x-1), (y-1, x-1), (y-1, x+1)]
+    
+    # Filter moves to stay within the boundaries (0 to 7)
+    valid_moves = [(new_y, new_x) for new_y, new_x in possible_moves if 0 <= new_y <= 7 and 0 <= new_x <= 7]
+    
+    return valid_moves
+
 def countPawnAmount(board):
     pawn_counter = 0
-    black_counter = 0
-    white_counter = 0
-  
-    for row in board:
-      for cell in row:
-        if cell != 0:
-          pawn_counter+=1
-        if cell == 1 or cell == 2:
-          white_counter+=1
-        elif cell == -1 or cell == -2:
-          black_counter+=1
-    
-    if white_counter == 0 or black_counter == 0:
+    black_pawns_counter = 0
+    black_queens_counter = 0
+    white_pawns_counter = 0
+    white_queens_counter = 0
+    pawns = []
+    taken_position = []
+
+    # plansza sie zaczyna w lewym gornym rogu
+    # i = y
+    # j = x
+    for i, row in enumerate(board):
+        pawns.append([])
+        for j, cell in enumerate(row):
+            if cell == 1:
+                white_pawns_counter += 1
+                pawns[i].append({
+                  "color": "white", #blue
+                  "role" : "pawn",
+                  "actual_position": (i,j),
+                  "possible_moves": calcPossibleMoves(i,j)
+                  })
+                taken_position.append((i,j))
+            elif cell == 2:
+                white_queens_counter += 1
+                pawns[i].append({
+                  "color": "white", #blue
+                  "role" : "queen",
+                  "actual_position": (i,j),
+                  "possible_moves": calcPossibleMoves(i,j)
+                  })
+                taken_position.append((i,j))
+            elif cell == -1:
+                black_pawns_counter += 1
+                pawns[i].append({
+                  "color": "black", #green
+                  "role" : "pawn",
+                  "actual_position": (i,j),
+                  "possible_moves": calcPossibleMoves(i,j)
+                  })
+                taken_position.append((i,j))
+            elif cell == -2:
+                black_queens_counter += 1
+                pawns[i].append({
+                  "color": "black", #green
+                  "role" : "queen",
+                  "actual_position": (i,j),
+                  "possible_moves": calcPossibleMoves(i,j)
+                  })
+                taken_position.append((i,j))
+            # else:
+            #     pawns[i].append('empty slot')
+            # print(pawns[i][j], '\n')
+            
+    pawn_counter = white_pawns_counter + white_queens_counter + black_pawns_counter + black_queens_counter
+    if (white_pawns_counter + white_queens_counter) == 0 or (black_pawns_counter + white_pawns_counter) == 0:
         endGame()
 
     data = {
       "pawn_counter" : pawn_counter,
-      "white_counter" : white_counter,
-      "black_counter" : black_counter
+      "white_pawns_counter" : white_pawns_counter,
+      "white_queens_counter" : white_queens_counter,
+      "black_pawns_counter" : black_pawns_counter,
+      "black_queens_counter" : black_queens_counter,
+      "pawns_data" : pawns,
+      "taken_positions" : taken_position
     }
+    # print(data)
     return data
 
 def endGame():
@@ -69,12 +125,33 @@ def endGame():
 
 def checkIfValid(board, old_board_filename):
     script_directory = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.join(script_directory, old_board_filename), 'r') as old_board:
-        old_board = json.load(old_board)
+    with open(os.path.join(script_directory, old_board_filename), 'r') as old_board_file:
+        file = json.load(old_board_file)
 
-    if(old_board == board.tolist()):
+    if(file['board'] == board.tolist()):
         print('plansze sa takie same')
         return 0
+    
+    print(file['details']['iteration_counter'])
+    if file['details']['iteration_counter'] > 0:
+        old_pawns_positions = file['details']['pawns']['taken_positions']
+        print(old_pawns_positions)
+
+        actual = countPawnAmount(board)
+        actual_pawns_positions = actual['taken_positions']
+        print(actual_pawns_positions)
+        
+        tuple1 = (0, 1, 1, 3)
+        tuple2 = (2, 3, 4, 5)
+
+        common_elements = tuple(set(tuple1) & set(tuple2))
+        print(common_elements)
+        # for i, (elem1, elem2) in enumerate(zip(old_pawns_positions, actual_pawns_positions)):
+        #     if tuple(elem1) != elem2:
+        #         print(f"Różnica na indeksie {i}: {elem1} != {elem2}")
+        #     else:
+        #         print("Tablice są identyczne.")
+        return 1
 
     return 1
 
@@ -121,7 +198,7 @@ class YourConsumer(WebsocketConsumer):
         text_data_json = json.loads(text_data)
         message = text_data_json['message']
 
-        image_path = 'C:/Users/TOM/Desktop/Projekt_Warcaby/Warcaby/My_app/cv_optimised/plansza.jpg'
+        image_path = 'C:/Users/TOM/Desktop/Projekt_Warcaby/Warcaby/My_app/cv_optimised/plansza2.jpg'
 
         board = Board(image_path)# Wycięcie samej planszy z obrazu
         if board.board is not None:
@@ -154,7 +231,7 @@ class YourConsumer(WebsocketConsumer):
                           'type' : 'new_position_message',
                           'message' : 'Cofnij ten ruch!!',
                           'is_legal' : False,
-                          'board' : board.tolist()
+                          'board' : board.tolist(),
                         })
         
 
@@ -169,5 +246,5 @@ class YourConsumer(WebsocketConsumer):
         'is_legal' : is_legal,
         'type' : 'new_position',
         'message' : message,
-        'board' : board
+        'board' : board,
       }))
