@@ -39,8 +39,8 @@ class Checkers():
 
     def makeBoardFromMoveList(self, beforeBoard):
         variants = []
-        print('DUPA', self.moveList)
-        for variantKey, variant in enumerate([self.moveList]):
+        print('DUPA', self.parse(self.moveList))
+        for variantKey, variant in enumerate(self.parse(self.moveList)):
             variants.append([])
             for moveKey, move in enumerate(variant):
                 if len(variants[variantKey]) == 0:
