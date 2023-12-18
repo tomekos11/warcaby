@@ -39,8 +39,8 @@ class Checkers():
 
     def makeBoardFromMoveList(self, beforeBoard):
         variants = []
-        print('DUPA', self.parse(self.moveList))
-        for variantKey, variant in enumerate(self.parse(self.moveList)):
+        print('DUPA', self.moveList)
+        for variantKey, variant in enumerate([self.moveList]):
             variants.append([])
             for moveKey, move in enumerate(variant):
                 if len(variants[variantKey]) == 0:
@@ -396,7 +396,11 @@ class Checkers():
         if enablePrint:
             if len(moves):
                 print(moves)
-            self.moveList.append((x, y, nx, ny))
+            if len(self.moveList):
+                self.moveList.append((nx, ny))
+            else:
+                self.moveList.append((x, y))
+                self.moveList.append((nx, ny))#/Users/msalamak/PycharmProjects/warcaby/My_app/cv_optimised
             print(f"Move from ({x}, {y}) to ({nx}, {ny})")
 
         canCapture, removed, _ = self.playMove(x, y, nx, ny)

@@ -10,7 +10,7 @@ from copy import deepcopy
 from .cv_optimised.algorithm_OK import Rules, Checkers
 from .cv_optimised.test import ImageProcess, Board
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
@@ -57,6 +57,7 @@ class YourConsumer(WebsocketConsumer):
             # Send message
             boardListForGame = board.tolist()
             for rowKey, row in enumerate(boardListForGame):
+                print(row)
                 for colKey, col in enumerate(row):
                     if col == -1:
                         boardListForGame[rowKey][colKey] = 2
@@ -66,6 +67,7 @@ class YourConsumer(WebsocketConsumer):
                         boardListForGame[rowKey][colKey] = 1
                     elif col == 2:
                         boardListForGame[rowKey][colKey] = 3
+
             print('------------------------------------------------')
             game.setBoard(boardListForGame)
             game.printBoard()
@@ -73,15 +75,16 @@ class YourConsumer(WebsocketConsumer):
             S, W = game.minimaxPlay(1, maxDepth=4, evaluate=Checkers.evaluate2, enablePrint=True)
             if S:
                 boardToReturn = game.makeBoardFromMoveList(boardToReturn)
+                print(boardToReturn)
             # if prevBoard != boardToReturn or rulesChanged:
             #     prevBoard = boardToReturn
             #     rulesChanged = False
             #     if S:
             #         boardToReturn = game.makeBoardFromMoveList(boardToReturn)
             #         print('koniec')
-            async_to_sync(self.channel_layer.group_send)(self.group_name,{'success': True,'type': 'initial_board_positions','message': '','positions': boardToReturn})
+            async_to_sync(self.channel_layer.group_send)(self.group_name,{'success': True, 'isWinner': W, 'type': 'initial_board_positions', 'message': '','positions': boardToReturn})
         else:
-            async_to_sync(self.channel_layer.group_send)(self.group_name,{'success': False,'type': 'initial_board_positions','message': '','positions': []})
+            async_to_sync(self.channel_layer.group_send)(self.group_name,{'success': False, 'type': 'initial_board_positions', 'message': '', 'positions': []})
 
     def initial_board_positions(self, event):
         message = event['message']

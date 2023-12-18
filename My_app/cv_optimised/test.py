@@ -96,7 +96,7 @@ class ImageProcess:
             return True     
 
     def checkCircleIsCorrectKing(self, radius, circle, circles):
-        THRESOLD = 5
+        THRESOLD = 3
         # Ocena, czy znaleziony okrag moze nalezec do krolowki
         for i in circles[0]:
             if (radius > i[2] 
