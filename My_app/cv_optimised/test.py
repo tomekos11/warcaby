@@ -19,12 +19,8 @@ class ImageProcess:
         # Zastosowanie filtru medianowego     
         self.edgesImage = cv2.medianBlur(self.edgesImage, 5)
         # Lub zastosowanie rozmycia Gaussowskiego
-        #self.edgesImage = cv2.GaussianBlur(self.edgesImage, (3, 3), 0)
 
         # Algorytm Otsu do automatycznego wyznaczania progu binaryzacji, todo do sprawdzenia jak sobie radzi
-        highThresh, thresh_im = cv2.threshold(self.edgesImage, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        lowThresh = 0.5 * highThresh
-        #self.edgesImage = cv2.Canny(self.edgesImage, lowThresh, highThresh)
         self.edgesImage = cv2.Canny(self.edgesImage, self.param1, self.param2)
 
         # Pobranie rozmiaru obrazu
@@ -46,8 +42,7 @@ class ImageProcess:
                     y1 = dic[i, j][1] - 10 if (dic[i, j][1] - 10) > 0 else dic[i, j][1]
                     x2 = dic[i, j][0] + int(cols/8) + 10 if (dic[i, j][0] + int(cols/8) + 10) < cols else dic[i, j][0] + int(cols/8)
                     y2 = dic[i, j][1] + int(rows/8) + 10 if (dic[i, j][1] + int(rows/8) + 10) < rows else dic[i, j][1] + int(rows/8)
-                    #print(y1, y2, x1, x2)
-                    self.FieldTable[i][j] = self.trimmed[y1:y2, x1:x2]                            
+                    self.FieldTable[i][j] = self.trimmed[y1:y2, x1:x2]
 
     def pointsToCut(self, rows, cols):
         points = []
@@ -95,11 +90,6 @@ class ImageProcess:
     def checkIsKing(self, img, radius, circle):
         # Sprawdzenie, czy pionek jest krolowka   
         circles = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, 1, 20, param1=50, param2=23 , minRadius= int(radius/2), maxRadius= int(radius - 0.2 * radius))
-        """circles = np.uint16(np.around(circles))        
-        for i in circles[0, :]:
-        # Narysuj okrąg na obrazie img3
-            cv2.circle(img, (i[0], i[1]), i[2], (255, 255, 255), 2)
-        board.showActualImage(img, 'king?')"""
         if circles is None or not self.checkCircleIsCorrectKing(radius, circle, circles):
             return False
         else:
@@ -109,9 +99,6 @@ class ImageProcess:
         THRESOLD = 5
         # Ocena, czy znaleziony okrag moze nalezec do krolowki
         for i in circles[0]:
-            # print('this', radius, circle)
-            # print(i)
-#print(i[0] + i[2] < circle[0] + radius - THRESOLD, i[0] - i[2] > circle[0] - radius + THRESOLD, i[1] + i[2] < circle[1] + radius - THRESOLD, i[1] + i[2] > circle[1] - radius + THRESOLD)
             if (radius > i[2] 
                 and (circle[0] > i[0] - i[2] and circle[0] < i[0] + i[2]) and (circle[1] > i[1] - i[2] and circle[1] < i[1] + i[2])
                 and (i[0] + i[2] < circle[0] + radius - THRESOLD) and (i[0] - i[2] > circle[0] - radius + THRESOLD) 
@@ -121,17 +108,12 @@ class ImageProcess:
 
     def checkCircleIsCorrect(self, img, circles):
         # Sprawdzenie poprawnosci znalezionych okregow
-        # img = cv2.Canny(img, 50, 150, apertureSize=3)            
         contours, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         maxCont = max(contours, key=cv2.contourArea)            
         x, y, w, h = cv2.boundingRect(maxCont)        
         for i in circles[0]:
-            # print(w, h, i)
-            # print(w + 0.1 * w > 2 * i[2], h + 0.1 * h  > 2 * i[2], w * 0.35 < i[2], h * 0.35 < i[2])
             if (w + 0.1 * w > 2 * i[2] or h + 0.1 * h > 2 * i[2]) and (w * 0.3 < i[2] or h * 0.3 < i[2]):
                 return True, i
-        # print("DIM: ", x, y, w, h)
-        # print(circles[0]) 
         return False, []
 
     def searchForPawn(self, img, pos):
@@ -140,13 +122,7 @@ class ImageProcess:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img_gray = copy.deepcopy(img)
         img = cv2.medianBlur(img, 5)
-        img_copy = copy.deepcopy(img)  # to ewentualnie moze byc przed Blurem, chociaż tak wydaje sie ok.
-        # Binaryzacja
-        x, dst = cv2.threshold(img, 50, 255, cv2.THRESH_BINARY)
-        # Poprzedni sposob, niby dziala, ale nie dziala
-        """#edges = cv2.GaussianBlur(img3, (3, 3), 0)
-        #edges = cv2.Canny(edges, self.param1, self.param2)        
-        #circles = cv2.HoughCircles(edges, cv2.HOUGH_GRADIENT, 1, 20, param1=70, param2=20, minRadius=10, maxRadius=0)"""
+        img_copy = copy.deepcopy(img)
         # Transformacja Hougha do znalezienia okręgów na obrazie, todo dodanie ustawiania
         circles = cv2.HoughCircles(copy.deepcopy(img), cv2.HOUGH_GRADIENT, 1, 20, param1=150, param2=24, minRadius=0,
                                    maxRadius=100)
@@ -181,17 +157,11 @@ class ImageProcess:
                 suma[0] += px[0]
                 suma[1] += px[1]
                 suma[2] += px[2]
-                # bgr, b > g
-        # board.showActualImage(img_color, 'circles')
-        # print(suma)
+
         if suma[0] > suma[1]:
             return 2 if isKing else 1
         else:
             return -2 if isKing else -1
-        # """if suma > thr:
-        #     cv2.circle(img, (el[0], el[1]), el[2], (255, 0, 0), 2)
-        # else:
-        #     cv2.circle(img, (el[0], el[1]), el[2], (255, 255, 255), 2)"""
 
 class Board:
     def __init__(self, image):
@@ -233,11 +203,8 @@ class Board:
             maxContour = max(contours, key=cv2.contourArea)
             # Pobranie współrzędnych prostokąta otaczającego kontur
             x, y, w, h = cv2.boundingRect(maxContour)
-            # Obliczenie kąta nachylenia planszy        
-            #angle = cv2.minAreaRect(maxContour)[-1]
-            #print('angle1', angle)
+            # Obliczenie kąta nachylenia planszy
             angle = self.getOrientation(copy.deepcopy(image))
-            #print('angle2', angle)
             if angle < 10: 
                 # Korekta orientacji przy użyciu transformacji afinicznej
                 M = cv2.getRotationMatrix2D((x + w / 2, y + h / 2), angle, 1)
@@ -274,10 +241,6 @@ class Board:
         cntr = (int(mean[0,0]), int(mean[0,1]))
         # Rysowanie punktu środka ciężkości
         cv2.circle(img, cntr, 3, (255, 0, 255), 2)
-        
-        # Punkt p1 i p2 do rysowania osi orientacji
-        p1 = (cntr[0] + 0.02 * eigenvectors[0,0] * eigenvalues[0,0], cntr[1] + 0.02 * eigenvectors[0,1] * eigenvalues[0,0])
-        p2 = (cntr[0] - 0.02 * eigenvectors[1,0] * eigenvalues[1,0], cntr[1] - 0.02 * eigenvectors[1,1] * eigenvalues[1,0])
         
         # Obliczenie kąta orientacji
         angle = atan2(eigenvectors[0,1], eigenvectors[0,0])
