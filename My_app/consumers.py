@@ -7,10 +7,14 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from copy import deepcopy
 
-from .cv_optimised.algorithm_OK import Rules, Checkers
-from .cv_optimised.test import ImageProcess, Board
+from .algorithm.NextMoveAlgorithm import Rules, Checkers
+from .algorithm.ImageProcessor import ImageProcessor
 
-cap = cv2.VideoCapture(0)
+from ultralytics import YOLO
+
+model = YOLO("My_app/algorithm/best.pt")
+
+cap = cv2.VideoCapture(1)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
@@ -34,6 +38,7 @@ class YourConsumer(WebsocketConsumer):
         )
 
     def receive(self, text_data):
+        print("START")
         global rules
         global prevBoard
         global rulesChanged
@@ -45,34 +50,23 @@ class YourConsumer(WebsocketConsumer):
             rules = Rules(message['settings']['forceTake'], message['settings']['takeBackward'],
                           message['settings']['queenStopsAfterTake'], message['settings']['queenMoveMaxOne'])
 
-        ret, frame = cap.read()
+        _, frame = cap.read()
         cv2.imwrite('frame.jpg', frame)
         image = cv2.imread('frame.jpg')
 
-        board = Board(image)  # Wycięcie samej planszy z obrazu
-        game = Checkers(rules)
-        if board.board is not None:
-            proc = ImageProcess(board.board)
-            board = proc.frame_table()  # uzyskanie pionków
-            # Send message
-            boardListForGame = board.tolist()
-            for rowKey, row in enumerate(boardListForGame):
-                print(row)
-                for colKey, col in enumerate(row):
-                    if col == -1:
-                        boardListForGame[rowKey][colKey] = 2
-                    elif col == -2:
-                        boardListForGame[rowKey][colKey] = 4
-                    elif col == 1:
-                        boardListForGame[rowKey][colKey] = 1
-                    elif col == 2:
-                        boardListForGame[rowKey][colKey] = 3
 
+        data = ImageProcessor(model, image)
+        board = data.get_board()
+        board_with_index = data.return_board_with_correct_index()
+        data.draw_image_with_perspective_changed()
+        #data.draw_yolo_image()
+        game = Checkers(rules)
+        if board['status'] == 'ok':
             print('------------------------------------------------')
-            game.setBoard(boardListForGame)
+            game.setBoard(board_with_index)
             game.printBoard()
-            boardToReturn = deepcopy(boardListForGame)
-            S, W = game.minimaxPlay(1, maxDepth=4, evaluate=Checkers.evaluate2, enablePrint=True)
+            boardToReturn = deepcopy(board_with_index)
+            S, W = game.minimaxPlay(0, maxDepth=4, evaluate=Checkers.evaluate2, enablePrint=True)
             if S:
                 boardToReturn = game.makeBoardFromMoveList(boardToReturn)
                 print(boardToReturn)
@@ -82,20 +76,22 @@ class YourConsumer(WebsocketConsumer):
             #     if S:
             #         boardToReturn = game.makeBoardFromMoveList(boardToReturn)
             #         print('koniec')
-            async_to_sync(self.channel_layer.group_send)(self.group_name,{'success': True, 'isWinner': W, 'type': 'initial_board_positions', 'message': '','positions': boardToReturn})
+            async_to_sync(self.channel_layer.group_send)(self.group_name,{'success': True, 'isWinner': W, 'type': 'initial_board_positions', 'message': '','positions': boardToReturn, 'status': board['status'] })
         else:
-            async_to_sync(self.channel_layer.group_send)(self.group_name,{'success': False, 'type': 'initial_board_positions', 'message': '', 'positions': []})
+            async_to_sync(self.channel_layer.group_send)(self.group_name,{'success': False, 'type': 'initial_board_positions', 'message': '', 'positions': board_with_index, 'status': board['status'] })
 
     def initial_board_positions(self, event):
         message = event['message']
         positions = event['positions']
         success = event['success']
+        status = event['status']
 
         self.send(text_data=json.dumps({
             'success': success,
             'type': 'board_positions',
             'message': message,
             'moves': positions,
+            'status' : status,
         }))
 
     def current_position_message(self, event):
