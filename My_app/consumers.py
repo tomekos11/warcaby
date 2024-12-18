@@ -58,15 +58,15 @@ class YourConsumer(WebsocketConsumer):
         data = ImageProcessor(model, image)
         board = data.get_board()
         board_with_index = data.return_board_with_correct_index()
-        data.draw_image_with_perspective_changed()
-        #data.draw_yolo_image()
+        # data.draw_image_with_perspective_changed()
+        # data.draw_yolo_image()
         game = Checkers(rules)
         if board['status'] == 'ok':
             print('------------------------------------------------')
             game.setBoard(board_with_index)
             game.printBoard()
             boardToReturn = deepcopy(board_with_index)
-            S, W = game.minimaxPlay(0, maxDepth=4, evaluate=Checkers.evaluate2, enablePrint=True)
+            S, W = game.minimaxPlay(1, maxDepth=5, evaluate=Checkers.evaluate2, enablePrint=True)
             if S:
                 boardToReturn = game.makeBoardFromMoveList(boardToReturn)
                 print(boardToReturn)
@@ -78,13 +78,15 @@ class YourConsumer(WebsocketConsumer):
             #         print('koniec')
             async_to_sync(self.channel_layer.group_send)(self.group_name,{'success': True, 'isWinner': W, 'type': 'initial_board_positions', 'message': '','positions': boardToReturn, 'status': board['status'] })
         else:
-            async_to_sync(self.channel_layer.group_send)(self.group_name,{'success': False, 'type': 'initial_board_positions', 'message': '', 'positions': board_with_index, 'status': board['status'] })
+            # data.draw_yolo_image()
+            async_to_sync(self.channel_layer.group_send)(self.group_name,{'success': False, 'isWinner': None, 'type': 'initial_board_positions', 'message': '', 'positions': board_with_index, 'status': board['status'] })
 
     def initial_board_positions(self, event):
         message = event['message']
         positions = event['positions']
         success = event['success']
         status = event['status']
+        isWinner = event['isWinner']
 
         self.send(text_data=json.dumps({
             'success': success,
@@ -92,18 +94,20 @@ class YourConsumer(WebsocketConsumer):
             'message': message,
             'moves': positions,
             'status' : status,
+            'isWinner' : isWinner == 'WHITE' or isWinner == 'BLACK',
+            'winnerColor': 1 if isWinner == 'WHITE' else 0
         }))
 
-    def current_position_message(self, event):
-        message = event['message']
-        moves = event['moves']
-        success = event['success']
-        is_legal = event['is_legal']
-
-        self.send(text_data=json.dumps({
-            'success': success,
-            'is_legal': is_legal,
-            'type': 'new_position',
-            'message': message,
-            'moves': moves,
-        }))
+    # def current_position_message(self, event):
+    #     message = event['message']
+    #     moves = event['moves']
+    #     success = event['success']
+    #     is_legal = event['is_legal']
+    #
+    #     self.send(text_data=json.dumps({
+    #         'success': success,
+    #         'is_legal': is_legal,
+    #         'type': 'new_position',
+    #         'message': message,
+    #         'moves': moves,
+    #     }))

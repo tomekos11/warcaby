@@ -71,9 +71,9 @@ class Checkers():
                                 moveTable[nextX][nextY] = 0
                                 break
 
-                    if moveTable[nx][ny] == self.WHITE and nx == self.size - 1:
+                    if moveTable[nx][ny] == self.WHITE and nx == 0:
                         moveTable[nx][ny] = self.WHITE_KING
-                    if moveTable[nx][ny] == self.BLACK and nx == 0:
+                    if moveTable[nx][ny] == self.BLACK and nx == self.size - 1:
                         moveTable[nx][ny] = self.BLACK_KING
                     # print("moves", variant, pawn, variant[moveKey-1][0], variant[moveKey-1][1],  "------------")
                     if variants[variantKey][len(variants[variantKey]) - 1] != moveTable:
@@ -105,7 +105,7 @@ class Checkers():
         # Wygenerowania ruchow dla zasad
         normalMoves = []
         gainMoves = []
-        dir = 1 if player == self.WHITE else - 1
+        dir = -1 if player == self.WHITE else 1
         if self.board[x][y] <= 2 or (self.board[x][y] > 2 and self.rules.kingOnlyOneField):
             for i in range(4):
                 if befX != -1 and befY != -1:
@@ -202,10 +202,10 @@ class Checkers():
         Tutaj nie wiem do konca jak sie zachowac, bo przy biciu do tylu i obowiazkowym wyjdzie
         to smiesznie (?)
         """
-        if self.board[nx][ny] == self.WHITE and nx == self.size - 1:
+        if self.board[nx][ny] == self.WHITE and nx == 0:
             self.board[nx][ny] = self.WHITE_KING
             return False, removed, True
-        if self.board[nx][ny] == self.BLACK and nx == 0:
+        if self.board[nx][ny] == self.BLACK and nx == self.size - 1:
             self.board[nx][ny] = self.BLACK_KING
             return False, removed, True
         if abs(nx - x) < 2 or removed == 0:
@@ -270,7 +270,7 @@ class Checkers():
                         else:
                             middleRow += sign * 1
 
-                    myDir = 1 if maximizer == self.WHITE else -1
+                    myDir = -1 if maximizer == self.WHITE else 1
                     vul = False
                     for k in range(4):
                         x = i + self.movesX[k]
